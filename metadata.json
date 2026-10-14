@@ -1,0 +1,6 @@
+{
+  "name": "LIFELOOP AI - Community Resource Redistribution Platform",
+  "description": "AI-powered community resource coordination, intelligent redistribution, constraint-aware allocation optimization, and waste reduction.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
