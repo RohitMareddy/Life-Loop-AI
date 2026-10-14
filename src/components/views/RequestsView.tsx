@@ -264,14 +264,16 @@ export const RequestsView: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setViewDetailReq(req)}
-                            className="p-1.5 text-[#66736A] hover:text-[#17231D] hover:bg-[#EEF1EB] rounded transition-colors"
+                            aria-label={`Inspect request details for ${req.organizationName}`}
+                            className="p-1.5 text-[#66736A] hover:text-[#17231D] hover:bg-[#EEF1EB] rounded transition-colors focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
                             title="Inspect Details"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4" aria-hidden="true" />
                           </button>
                           <button
                             onClick={() => setActiveTab('optimizer')}
-                            className="px-2 py-1 text-xs font-semibold text-[#176B4D] hover:bg-[#EEF5F1] rounded transition-colors"
+                            aria-label={`Allocate inventory for ${req.organizationName}`}
+                            className="px-2 py-1 text-xs font-bold text-[#176B4D] hover:bg-[#EEF5F1] rounded transition-colors focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
                           >
                             Allocate
                           </button>
@@ -288,22 +290,29 @@ export const RequestsView: React.FC = () => {
 
       {/* Request Details Modal */}
       {viewDetailReq && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="req-detail-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4"
+          onKeyDown={(e) => e.key === 'Escape' && setViewDetailReq(null)}
+        >
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full border border-[#E5E7EB] p-6 space-y-4">
             <div className="flex items-start justify-between border-b border-[#E5E7EB] pb-3">
               <div>
                 <span className="text-xs font-mono uppercase text-[#176B4D] font-medium">
                   {viewDetailReq.id} · {viewDetailReq.organizationType}
                 </span>
-                <h3 className="text-base font-bold text-[#17231D] mt-0.5">
+                <h3 id="req-detail-modal-title" className="text-base font-bold text-[#17231D] mt-0.5">
                   {viewDetailReq.organizationName}
                 </h3>
               </div>
               <button
                 onClick={() => setViewDetailReq(null)}
-                className="text-[#8A958E] hover:text-[#17231D] p-1"
+                aria-label="Close request details dialog"
+                className="text-[#8A958E] hover:text-[#17231D] p-1 rounded focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -373,41 +382,50 @@ export const RequestsView: React.FC = () => {
 
       {/* Create Request Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-request-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4"
+          onKeyDown={(e) => e.key === 'Escape' && setIsCreateModalOpen(false)}
+        >
           <div className="bg-white rounded-xl shadow-xl max-w-xl w-full border border-[#E5E7EB] p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
               <div>
-                <h3 className="text-base font-bold text-[#17231D]">Submit Community Request</h3>
-                <p className="text-xs text-[#66736A]">Register an organization's resource needs.</p>
+                <h3 id="create-request-modal-title" className="text-base font-bold text-[#17231D]">Submit Community Request</h3>
+                <p className="text-xs text-[#66736A]">Register an organization&apos;s resource needs.</p>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-[#8A958E] hover:text-[#17231D] p-1"
+                aria-label="Close submit request dialog"
+                className="text-[#8A958E] hover:text-[#17231D] p-1 rounded focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
             <form onSubmit={handleCreateRequest} className="space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Organization Name *</label>
+                  <label htmlFor="req-org-name" className="font-semibold text-[#17231D]">Organization Name *</label>
                   <input
+                    id="req-org-name"
                     type="text"
                     required
                     value={formData.organizationName}
                     onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
                     placeholder="e.g. Lincoln Middle School"
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus:outline-none focus:border-[#176B4D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Organization Type</label>
+                  <label htmlFor="req-org-type" className="font-semibold text-[#17231D]">Organization Type</label>
                   <select
+                    id="req-org-type"
                     value={formData.organizationType}
                     onChange={(e) => setFormData({ ...formData, organizationType: e.target.value as OrganizationType })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   >
                     <option value="school">School</option>
                     <option value="community_learning_center">Community Learning Center</option>
@@ -419,47 +437,51 @@ export const RequestsView: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-medium text-[#17231D]">Requested Items Description *</label>
+                <label htmlFor="req-items-desc" className="font-semibold text-[#17231D]">Requested Items Description *</label>
                 <input
+                  id="req-items-desc"
                   type="text"
                   required
                   value={formData.requestedItems}
                   onChange={(e) => setFormData({ ...formData, requestedItems: e.target.value })}
                   placeholder="e.g. 50 student writing notebooks and pens"
-                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Quantity *</label>
+                  <label htmlFor="req-quantity" className="font-semibold text-[#17231D]">Quantity *</label>
                   <input
+                    id="req-quantity"
                     type="number"
                     min="1"
                     required
                     value={formData.requestedQuantity}
                     onChange={(e) => setFormData({ ...formData, requestedQuantity: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg font-mono tabular-nums text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg font-mono tabular-nums text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Unit *</label>
+                  <label htmlFor="req-unit" className="font-semibold text-[#17231D]">Unit *</label>
                   <input
+                    id="req-unit"
                     type="text"
                     required
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Category</label>
+                  <label htmlFor="req-category" className="font-semibold text-[#17231D]">Category</label>
                   <select
+                    id="req-category"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as ResourceCategory })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   >
                     <option value="stationery">Stationery</option>
                     <option value="books_education">Books & Education</option>
@@ -472,11 +494,12 @@ export const RequestsView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Priority Level</label>
+                  <label htmlFor="req-priority-select" className="font-semibold text-[#17231D]">Priority Level</label>
                   <select
+                    id="req-priority-select"
                     value={formData.priorityLevel}
                     onChange={(e) => setFormData({ ...formData, priorityLevel: e.target.value as RequestPriority })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   >
                     <option value="urgent">Urgent (Imminent deadline / emergency)</option>
                     <option value="high">High (Semester start / key program)</option>
@@ -486,25 +509,27 @@ export const RequestsView: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Required By Date *</label>
+                  <label htmlFor="req-required-date" className="font-semibold text-[#17231D]">Required By Date *</label>
                   <input
+                    id="req-required-date"
                     type="date"
                     required
                     value={formData.requiredByDate}
                     onChange={(e) => setFormData({ ...formData, requiredByDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-medium text-[#17231D]">Priority Explanation</label>
+                <label htmlFor="req-priority-exp" className="font-semibold text-[#17231D]">Priority Explanation</label>
                 <input
+                  id="req-priority-exp"
                   type="text"
                   value={formData.priorityExplanation}
                   onChange={(e) => setFormData({ ...formData, priorityExplanation: e.target.value })}
                   placeholder="Explain why this deadline or priority is required"
-                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                 />
               </div>
 
@@ -512,13 +537,13 @@ export const RequestsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-3.5 py-2 text-xs font-medium text-[#47544C] hover:bg-[#F3F5F1] rounded-lg"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#47544C] hover:bg-[#F3F5F1] rounded-lg focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#176B4D] hover:bg-[#104A36] rounded-lg shadow-xs"
+                  className="px-4 py-2 text-xs font-bold text-white bg-[#176B4D] hover:bg-[#104A36] rounded-lg shadow-xs focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
                 >
                   Submit Request
                 </button>

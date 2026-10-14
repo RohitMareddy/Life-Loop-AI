@@ -231,7 +231,8 @@ export const DistributionView: React.FC = () => {
                           {dist.status === 'awaiting_scheduling' && (
                             <button
                               onClick={() => handleOpenActionModal(dist, 'schedule')}
-                              className="px-2.5 py-1 text-xs font-semibold text-[#176B4D] bg-[#F0F6F2] hover:bg-[#E2EDE5] rounded border border-[#D1E3D7]"
+                              aria-label={`Schedule pickup or delivery for ${dist.resourceTitle}`}
+                              className="px-2.5 py-1 text-xs font-bold text-[#176B4D] bg-[#F0F6F2] hover:bg-[#E2EDE5] rounded border border-[#D1E3D7] focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
                             >
                               Schedule
                             </button>
@@ -241,13 +242,15 @@ export const DistributionView: React.FC = () => {
                             <>
                               <button
                                 onClick={() => handleOpenActionModal(dist, 'deliver')}
-                                className="px-2.5 py-1 text-xs font-semibold text-white bg-[#176B4D] hover:bg-[#104A36] rounded"
+                                aria-label={`Record delivery completed for ${dist.resourceTitle}`}
+                                className="px-2.5 py-1 text-xs font-bold text-white bg-[#176B4D] hover:bg-[#104A36] rounded focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
                               >
                                 Record Drop-off
                               </button>
                               <button
                                 onClick={() => handleOpenActionModal(dist, 'partial')}
-                                className="px-2 py-1 text-xs font-medium text-[#47544C] hover:bg-[#EEF1EB] rounded"
+                                aria-label={`Record partial delivery for ${dist.resourceTitle}`}
+                                className="px-2 py-1 text-xs font-semibold text-[#47544C] hover:bg-[#EEF1EB] rounded focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none"
                                 title="Record Partial Delivery shortfall"
                               >
                                 Partial
@@ -258,15 +261,16 @@ export const DistributionView: React.FC = () => {
                           {dist.status === 'delivered' && (
                             <button
                               onClick={() => handleOpenActionModal(dist, 'verify')}
-                              className="px-2.5 py-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-300"
+                              aria-label={`Verify signed receipt for ${dist.resourceTitle}`}
+                              className="px-2.5 py-1 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
                             >
                               Verify Receipt
                             </button>
                           )}
 
                           {isVerified && (
-                            <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 justify-end">
-                              <ShieldCheck className="w-3.5 h-3.5" />
+                            <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1 justify-end">
+                              <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
                               <span>Closed</span>
                             </span>
                           )}
@@ -283,22 +287,29 @@ export const DistributionView: React.FC = () => {
 
       {/* Action Dialog Modal */}
       {modalMode && activeModalDist && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dist-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4"
+          onKeyDown={(e) => e.key === 'Escape' && setModalMode(null)}
+        >
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-[#E5E7EB] p-6 space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
               <div>
                 <span className="text-[11px] font-mono uppercase text-[#176B4D] font-bold">
                   {modalMode.toUpperCase()} WORKFLOW
                 </span>
-                <h3 className="text-base font-bold text-[#17231D] mt-0.5">
+                <h3 id="dist-modal-title" className="text-base font-bold text-[#17231D] mt-0.5">
                   {activeModalDist.resourceTitle}
                 </h3>
               </div>
               <button
                 onClick={() => setModalMode(null)}
-                className="text-[#8A958E] hover:text-[#17231D]"
+                aria-label="Close distribution dialog"
+                className="text-[#8A958E] hover:text-[#17231D] p-1 rounded focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -310,53 +321,57 @@ export const DistributionView: React.FC = () => {
 
               {modalMode === 'schedule' && (
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Target Delivery Date</label>
+                  <label htmlFor="dist-target-date" className="font-semibold text-[#17231D]">Target Delivery Date</label>
                   <input
+                    id="dist-target-date"
                     type="date"
                     value={scheduledDateInput}
                     onChange={(e) => setScheduledDateInput(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
               )}
 
               {modalMode === 'partial' && (
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">
+                  <label htmlFor="dist-partial-input" className="font-semibold text-[#17231D]">
                     Actual Delivered Quantity (Remainder returned to inventory)
                   </label>
                   <input
+                    id="dist-partial-input"
                     type="number"
                     min="1"
                     max={activeModalDist.quantity}
                     value={partialQtyInput}
                     onChange={(e) => setPartialQtyInput(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg font-mono tabular-nums text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg font-mono tabular-nums text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
               )}
 
               {(modalMode === 'deliver' || modalMode === 'verify') && (
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Confirmation Slip / Evidence</label>
+                  <label htmlFor="dist-evidence" className="font-semibold text-[#17231D]">Confirmation Slip / Evidence</label>
                   <input
+                    id="dist-evidence"
                     type="text"
                     value={evidenceInput}
                     onChange={(e) => setEvidenceInput(e.target.value)}
                     placeholder="e.g. Stamped intake slip #LC-884 signed by Principal"
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
               )}
 
               <div className="space-y-1">
-                <label className="font-medium text-[#17231D]">Coordinator Notes</label>
+                <label htmlFor="dist-notes" className="font-semibold text-[#17231D]">Coordinator Notes</label>
                 <textarea
+                  id="dist-notes"
                   rows={2}
                   value={deliveryNotesInput}
                   onChange={(e) => setDeliveryNotesInput(e.target.value)}
                   placeholder="Dropoff details, recipient condition sign-off, or driver notes"
-                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                 />
               </div>
             </div>
@@ -364,13 +379,13 @@ export const DistributionView: React.FC = () => {
             <div className="flex justify-end gap-2 pt-2 border-t border-[#E5E7EB]">
               <button
                 onClick={() => setModalMode(null)}
-                className="px-3.5 py-2 text-xs font-medium text-[#47544C] hover:bg-[#F3F5F1] rounded-lg"
+                className="px-3.5 py-2 text-xs font-semibold text-[#47544C] hover:bg-[#F3F5F1] rounded-lg focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmModalAction}
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#176B4D] hover:bg-[#104A36] rounded-lg shadow-xs"
+                className="px-4 py-2 text-xs font-bold text-white bg-[#176B4D] hover:bg-[#104A36] rounded-lg shadow-xs focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
               >
                 Confirm {modalMode}
               </button>

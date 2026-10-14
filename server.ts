@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '5mb' }));
 
 // Shared Gemini client utility
 const apiKey = process.env.GEMINI_API_KEY;
@@ -28,6 +28,15 @@ if (apiKey) {
   });
 }
 
+// In-memory cache for match explanations to prevent redundant Gemini API calls
+interface CacheEntry {
+  explanation: string;
+  generatedBy: string;
+  timestamp: number;
+}
+const explanationCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 1000 * 60 * 30; // 30 minutes
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
@@ -37,12 +46,27 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Helper for timing out async operations safely
+function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Operation timed out after 15 seconds')), timeoutMs)
+    ),
+  ]);
+}
+
 // Endpoint: AI-Powered Smart Resource Intake Extraction
 app.post('/api/gemini/extract-resource', async (req, res) => {
   const { textDescription, imageBase64, mimeType } = req.body;
 
   if (!textDescription && !imageBase64) {
     return res.status(400).json({ error: 'Text description or image is required.' });
+  }
+
+  // Input length security validation
+  if (textDescription && typeof textDescription === 'string' && textDescription.length > 8000) {
+    return res.status(400).json({ error: 'Description exceeds maximum allowed length of 8,000 characters.' });
   }
 
   if (!ai) {
@@ -67,11 +91,11 @@ Strict extraction rules:
 6. Identify missing information explicitly.
 
 Donation description:
-"""${textDescription || 'See attached image'}"""
+"""${typeof textDescription === 'string' ? textDescription.trim() : 'See attached image'}"""
 `;
 
-    const parts: any[] = [];
-    if (imageBase64 && mimeType) {
+    const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+    if (imageBase64 && typeof mimeType === 'string' && mimeType.startsWith('image/')) {
       parts.push({
         inlineData: {
           mimeType,
@@ -81,11 +105,12 @@ Donation description:
     }
     parts.push({ text: prompt });
 
-    const response = await ai.models.generateContent({
+    const generatePromise = ai.models.generateContent({
       model: 'gemini-3.8-flash',
       contents: { parts },
       config: {
-        systemInstruction: 'You extract structured community donation resources into valid JSON conforming strictly to the requested schema. Never hallucinate verified facts.',
+        systemInstruction:
+          'You extract structured community donation resources into valid JSON conforming strictly to the requested schema. Never hallucinate verified facts.',
         responseMimeType: 'application/json',
         responseSchema: {
           type: Type.OBJECT,
@@ -98,7 +123,8 @@ Donation description:
                   title: { type: Type.STRING, description: 'Short descriptive title of the resource' },
                   category: {
                     type: Type.STRING,
-                    description: 'One of: books_education, stationery, furniture, household_supplies, non_perishable, digital_devices',
+                    description:
+                      'One of: books_education, stationery, furniture, household_supplies, non_perishable, digital_devices',
                   },
                   description: { type: Type.STRING, description: 'Clear summary of what was donated' },
                   quantity: { type: Type.NUMBER, description: 'Extracted numeric quantity' },
@@ -107,9 +133,18 @@ Donation description:
                     type: Type.STRING,
                     description: 'One of: new, good, used_functional, requires_inspection, unsuitable',
                   },
-                  availableUntil: { type: Type.STRING, description: 'Availability deadline if mentioned, or empty string' },
-                  storageRequirements: { type: Type.STRING, description: 'Special storage or transport needs if any' },
-                  pickupLocation: { type: Type.STRING, description: 'Pickup location if specified, or empty string' },
+                  availableUntil: {
+                    type: Type.STRING,
+                    description: 'Availability deadline if mentioned, or empty string',
+                  },
+                  storageRequirements: {
+                    type: Type.STRING,
+                    description: 'Special storage or transport needs if any',
+                  },
+                  pickupLocation: {
+                    type: Type.STRING,
+                    description: 'Pickup location if specified, or empty string',
+                  },
                   missingInformation: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING },
@@ -128,25 +163,31 @@ Donation description:
                 required: ['title', 'category', 'description', 'quantity', 'unit', 'condition'],
               },
             },
-            donorSummary: { type: Type.STRING, description: 'Brief human-readable summary of the extraction' },
+            donorSummary: {
+              type: Type.STRING,
+              description: 'Brief human-readable summary of the extraction',
+            },
           },
           required: ['extractedLots'],
         },
       },
     });
 
+    const response = await withTimeout(generatePromise, 15000);
     const parsed = JSON.parse(response.text || '{}');
     return res.json(parsed);
-  } catch (err: any) {
-    console.error('Gemini extraction error:', err);
+  } catch (err: unknown) {
+    const rawMsg = err instanceof Error ? err.message : 'Unknown processing error';
+    const safeDetails = rawMsg.toLowerCase().includes('key') ? 'Service configuration or network error' : rawMsg.slice(0, 150);
     return res.status(500).json({
-      error: err.message || 'Failed to extract resource information with Gemini AI.',
+      error: 'Failed to extract resource information with Gemini AI. Fallback available.',
+      details: safeDetails,
       code: 'AI_PROCESSING_ERROR',
     });
   }
 });
 
-// Endpoint: Grounded Match Explanation
+// Endpoint: Grounded Match Explanation with Safe Caching
 app.post('/api/gemini/explain-match', async (req, res) => {
   const { resource, request, compatibilityMetrics } = req.body;
 
@@ -154,9 +195,26 @@ app.post('/api/gemini/explain-match', async (req, res) => {
     return res.status(400).json({ error: 'Resource and Request data are required.' });
   }
 
+  const cacheKey = `${resource.id}:${request.id}:${compatibilityMetrics?.overallScore ?? 0}`;
+  const cached = explanationCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return res.json({
+      explanation: cached.explanation,
+      generatedBy: `${cached.generatedBy} (cached)`,
+    });
+  }
+
+  const fallbackText = `Deterministic Compatibility: Overall score is ${
+    compatibilityMetrics?.overallScore ?? 85
+  }/100. Category: ${resource.category}. Requested: ${request.requestedQuantity} ${
+    request.unit
+  }. Available: ${resource.availableQuantity} ${resource.unit}. Condition: ${
+    resource.condition
+  } meets minimum required ${request.minAcceptableCondition}.`;
+
   if (!ai) {
     return res.json({
-      explanation: `Deterministic Compatibility: Overall score is ${compatibilityMetrics?.overallScore ?? 85}/100. Category: ${resource.category}. Requested: ${request.requestedQuantity} ${request.unit}. Available: ${resource.availableQuantity} ${resource.unit}. Condition: ${resource.condition} meets minimum required ${request.minAcceptableCondition}.`,
+      explanation: fallbackText,
       generatedBy: 'deterministic_fallback',
     });
   }
@@ -197,22 +255,32 @@ Provide a concise, transparent explanation answering:
 3. What information remains unknown and requires coordinator verification?
 `;
 
-    const response = await ai.models.generateContent({
+    const generatePromise = ai.models.generateContent({
       model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
-        systemInstruction: 'You are an objective, honest explainability engine. Adhere strictly to the facts provided.',
+        systemInstruction:
+          'You are an objective, honest explainability engine. Adhere strictly to the facts provided.',
       },
     });
 
+    const response = await withTimeout(generatePromise, 12000);
+    const explanation =
+      response.text?.trim() || 'Explanation generated based on deterministic compatibility factors.';
+
+    explanationCache.set(cacheKey, {
+      explanation,
+      generatedBy: 'gemini-3.8-flash',
+      timestamp: Date.now(),
+    });
+
     return res.json({
-      explanation: response.text?.trim() || 'Explanation generated based on deterministic compatibility factors.',
+      explanation,
       generatedBy: 'gemini-3.8-flash',
     });
-  } catch (err: any) {
-    console.error('Gemini explanation error:', err);
+  } catch (err: unknown) {
     return res.json({
-      explanation: `Deterministic Compatibility: Overall score is ${compatibilityMetrics?.overallScore ?? 85}/100. Category: ${resource.category}. Requested: ${request.requestedQuantity} ${request.unit}. Available: ${resource.availableQuantity} ${resource.unit}. Condition: ${resource.condition} meets minimum required ${request.minAcceptableCondition}.`,
+      explanation: fallbackText,
       generatedBy: 'deterministic_fallback',
     });
   }
@@ -222,13 +290,18 @@ Provide a concise, transparent explanation answering:
 app.post('/api/gemini/assistant', async (req, res) => {
   const { query, systemStateSnapshot } = req.body;
 
-  if (!query) {
-    return res.status(400).json({ error: 'Query is required.' });
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ error: 'Valid query string is required.' });
+  }
+
+  if (query.length > 1000) {
+    return res.status(400).json({ error: 'Query is too long (maximum 1,000 characters).' });
   }
 
   if (!ai) {
     return res.json({
-      reply: 'Loop Assistant is operating in local deterministic mode (Gemini API key is not configured in secrets). I can confirm your current inventory has multiple items and community requests. You can explore the Impact Optimizer and What-If Simulator directly from the left navigation.',
+      reply:
+        'Loop Assistant is operating in local deterministic mode (Gemini API key is not configured in secrets). I can confirm your current inventory has multiple items and community requests. You can explore the Impact Optimizer and What-If Simulator directly from the left navigation.',
       isFallback: true,
     });
   }
@@ -253,25 +326,27 @@ Platform Snapshot:
 - Active Allocation Strategy: ${systemStateSnapshot?.activeStrategy ?? 'Maximize Total Fulfillment'}
 
 User Query:
-"${query}"
+"${query.trim()}"
 `;
 
-    const response = await ai.models.generateContent({
+    const generatePromise = ai.models.generateContent({
       model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
-        systemInstruction: 'You are the calm, knowledgeable Loop Assistant for LIFELOOP AI community resource redistribution.',
+        systemInstruction:
+          'You are the calm, knowledgeable Loop Assistant for LIFELOOP AI community resource redistribution.',
       },
     });
 
+    const response = await withTimeout(generatePromise, 15000);
     return res.json({
       reply: response.text?.trim() || 'No answer generated.',
       isFallback: false,
     });
-  } catch (err: any) {
-    console.error('Gemini assistant error:', err);
+  } catch (err: unknown) {
     return res.json({
-      reply: 'I encountered an error querying the AI service. You can continue reviewing resources and running optimization directly through the dashboard.',
+      reply:
+        'I encountered an error querying the AI service. You can continue reviewing resources and running optimization directly through the dashboard.',
       isFallback: true,
     });
   }
@@ -297,11 +372,22 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`LIFELOOP AI server running on http://0.0.0.0:${PORT} [${isProd ? 'production' : 'development'}]`);
+    console.log(
+      `LIFELOOP AI server running on http://0.0.0.0:${PORT} [${
+        isProd ? 'production' : 'development'
+      }]`
+    );
   });
 }
 
-startServer().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+// Export app and server starter for testing and execution
+export { app, startServer };
+
+if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+  startServer().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}
+
+

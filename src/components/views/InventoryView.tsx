@@ -267,17 +267,19 @@ export const InventoryView: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setViewDetailLot(lot)}
-                            className="p-1.5 text-[#66736A] hover:text-[#17231D] hover:bg-[#EEF1EB] rounded transition-colors"
+                            aria-label={`View specifications for ${lot.title}`}
+                            className="p-1.5 text-[#66736A] hover:text-[#17231D] hover:bg-[#EEF1EB] rounded transition-colors focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
                             title="View Lot Specifications"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4" aria-hidden="true" />
                           </button>
                           <button
                             onClick={() => archiveResource(lot.id)}
-                            className="p-1.5 text-[#66736A] hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                            aria-label={`Archive resource lot ${lot.title}`}
+                            className="p-1.5 text-[#66736A] hover:text-rose-600 hover:bg-rose-50 rounded transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
                             title="Archive Lot"
                           >
-                            <Archive className="w-4 h-4" />
+                            <Archive className="w-4 h-4" aria-hidden="true" />
                           </button>
                         </div>
                       </td>
@@ -292,20 +294,27 @@ export const InventoryView: React.FC = () => {
 
       {/* View Detail Modal */}
       {viewDetailLot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="detail-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4"
+          onKeyDown={(e) => e.key === 'Escape' && setViewDetailLot(null)}
+        >
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full border border-[#E5E7EB] p-6 space-y-4">
             <div className="flex items-start justify-between border-b border-[#E5E7EB] pb-3">
               <div>
                 <span className="text-xs font-mono uppercase text-[#176B4D] font-medium">
                   {viewDetailLot.id} · {viewDetailLot.category}
                 </span>
-                <h3 className="text-base font-bold text-[#17231D] mt-0.5">{viewDetailLot.title}</h3>
+                <h3 id="detail-modal-title" className="text-base font-bold text-[#17231D] mt-0.5">{viewDetailLot.title}</h3>
               </div>
               <button
                 onClick={() => setViewDetailLot(null)}
-                className="text-[#8A958E] hover:text-[#17231D] p-1"
+                aria-label="Close resource details dialog"
+                className="text-[#8A958E] hover:text-[#17231D] p-1 rounded focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -368,41 +377,50 @@ export const InventoryView: React.FC = () => {
 
       {/* Manual Add Resource Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-resource-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs p-4"
+          onKeyDown={(e) => e.key === 'Escape' && setIsAddModalOpen(false)}
+        >
           <div className="bg-white rounded-xl shadow-xl max-w-xl w-full border border-[#E5E7EB] p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
               <div>
-                <h3 className="text-base font-bold text-[#17231D]">Register New Resource Lot</h3>
+                <h3 id="add-resource-modal-title" className="text-base font-bold text-[#17231D]">Register New Resource Lot</h3>
                 <p className="text-xs text-[#66736A]">Manual creation with deterministic validation.</p>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-[#8A958E] hover:text-[#17231D] p-1"
+                aria-label="Close add resource dialog"
+                className="text-[#8A958E] hover:text-[#17231D] p-1 rounded focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
             <form onSubmit={handleCreateResource} className="space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="font-medium text-[#17231D]">Resource Title *</label>
+                <label htmlFor="res-title-input" className="font-semibold text-[#17231D]">Resource Title *</label>
                 <input
+                  id="res-title-input"
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="e.g. 100 Hardcover Children Readers"
-                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus:outline-none focus:border-[#176B4D]"
+                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus:outline-none focus:border-[#176B4D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Category</label>
+                  <label htmlFor="res-category-select" className="font-semibold text-[#17231D]">Category</label>
                   <select
+                    id="res-category-select"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as ResourceCategory })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   >
                     <option value="stationery">Stationery</option>
                     <option value="books_education">Books & Educational</option>
@@ -413,11 +431,12 @@ export const InventoryView: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Condition</label>
+                  <label htmlFor="res-condition-select" className="font-semibold text-[#17231D]">Condition</label>
                   <select
+                    id="res-condition-select"
                     value={formData.condition}
                     onChange={(e) => setFormData({ ...formData, condition: e.target.value as ResourceCondition })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   >
                     <option value="new">New</option>
                     <option value="good">Good</option>
@@ -430,59 +449,64 @@ export const InventoryView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Quantity *</label>
+                  <label htmlFor="res-quantity-input" className="font-semibold text-[#17231D]">Quantity *</label>
                   <input
+                    id="res-quantity-input"
                     type="number"
                     min="1"
                     required
                     value={formData.quantity}
                     onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg font-mono tabular-nums text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg font-mono tabular-nums text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Unit *</label>
+                  <label htmlFor="res-unit-input" className="font-semibold text-[#17231D]">Unit *</label>
                   <input
+                    id="res-unit-input"
                     type="text"
                     required
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                     placeholder="e.g. books, notebooks, desks"
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="font-medium text-[#17231D]">Description</label>
+                <label htmlFor="res-description-input" className="font-semibold text-[#17231D]">Description</label>
                 <textarea
+                  id="res-description-input"
                   rows={2}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Details on condition, packaging, and usability"
-                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                  className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Pickup Location</label>
+                  <label htmlFor="res-location-input" className="font-semibold text-[#17231D]">Pickup Location</label>
                   <input
+                    id="res-location-input"
                     type="text"
                     value={formData.pickupLocation}
                     onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-medium text-[#17231D]">Donor Organization</label>
+                  <label htmlFor="res-donor-input" className="font-semibold text-[#17231D]">Donor Organization</label>
                   <input
+                    id="res-donor-input"
                     type="text"
                     value={formData.donorOrganization}
                     onChange={(e) => setFormData({ ...formData, donorOrganization: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D]"
+                    className="w-full px-3 py-2 bg-[#F7F8F4] border border-[#E5E7EB] rounded-lg text-[#17231D] focus-visible:ring-2 focus-visible:ring-[#176B4D]"
                   />
                 </div>
               </div>
@@ -491,13 +515,13 @@ export const InventoryView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-3.5 py-2 text-xs font-medium text-[#47544C] hover:bg-[#F3F5F1] rounded-lg"
+                  className="px-3.5 py-2 text-xs font-semibold text-[#47544C] hover:bg-[#F3F5F1] rounded-lg focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:outline-none"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#176B4D] hover:bg-[#104A36] rounded-lg shadow-xs"
+                  className="px-4 py-2 text-xs font-bold text-white bg-[#176B4D] hover:bg-[#104A36] rounded-lg shadow-xs focus-visible:ring-2 focus-visible:ring-[#176B4D] focus-visible:outline-none"
                 >
                   Save to Inventory
                 </button>
